@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.text.Font?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.cell.PropertyValueFactory?>
+
+<!-- Using fx:root pattern so Main can instantiate DashboardTab normally -->
+<fx:root type="BorderPane" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+         style="-fx-background-color: #f0f2f5;">
+    <padding>
+        <Insets top="18" right="18" bottom="18" left="18" />
+    </padding>
+
+    <center>
+        <VBox spacing="22">
+            <!-- ── STATS SECTION ── -->
+            <VBox spacing="10">
+                <!-- Section Header -->
+                <HBox alignment="CENTER_LEFT">
+                    <Pane minWidth="4" prefWidth="4" minHeight="28" style="-fx-background-color: #2b5eb8;" />
+                    <Label text="Overview">
+                        <font><Font name="System Bold" size="14" /></font>
+                        <padding><Insets top="3" bottom="3" left="10" /></padding>
+                    </Label>
+                </HBox>
+
+                <!-- Cards Row -->
+                <HBox spacing="14" alignment="CENTER_LEFT">
+                    <!-- Total Rooms -->
+                    <HBox prefWidth="220" style="-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                        <Pane minWidth="6" prefWidth="6" style="-fx-background-color: #1565c0;" />
+                        <VBox spacing="6">
+                            <padding><Insets top="12" right="20" bottom="12" left="14" /></padding>
+                            <Label text="Total Rooms" style="-fx-text-fill: #666; -fx-font-size: 12px;" />
+                            <Label fx:id="valTotal" text="—" textFill="#1c2e4a">
+                                <font><Font name="System Bold" size="28" /></font>
+                            </Label>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Available -->
+                    <HBox prefWidth="220" style="-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                        <Pane minWidth="6" prefWidth="6" style="-fx-background-color: #2e7d32;" />
+                        <VBox spacing="6">
+                            <padding><Insets top="12" right="20" bottom="12" left="14" /></padding>
+                            <Label text="Available" style="-fx-text-fill: #666; -fx-font-size: 12px;" />
+                            <Label fx:id="valAvailable" text="—" textFill="#1c2e4a">
+                                <font><Font name="System Bold" size="28" /></font>
+                            </Label>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Occupied -->
+                    <HBox prefWidth="220" style="-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                        <Pane minWidth="6" prefWidth="6" style="-fx-background-color: #e65100;" />
+                        <VBox spacing="6">
+                            <padding><Insets top="12" right="20" bottom="12" left="14" /></padding>
+                            <Label text="Currently Occupied" style="-fx-text-fill: #666; -fx-font-size: 12px;" />
+                            <Label fx:id="valOccupied" text="—" textFill="#1c2e4a">
+                                <font><Font name="System Bold" size="28" /></font>
+                            </Label>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Revenue -->
+                    <HBox prefWidth="220" style="-fx-background-color: white; -fx-border-color: #e0e0e0; -fx-border-width: 1;">
+                        <Pane minWidth="6" prefWidth="6" style="-fx-background-color: #6a1b9a;" />
+                        <VBox spacing="6">
+                            <padding><Insets top="12" right="20" bottom="12" left="14" /></padding>
+                            <Label text="Revenue (checked-out)" style="-fx-text-fill: #666; -fx-font-size: 12px;" />
+                            <Label fx:id="valRevenue" text="—" textFill="#1c2e4a">
+                                <font><Font name="System Bold" size="28" /></font>
+                            </Label>
+                        </VBox>
+                    </HBox>
+                </HBox>
+                <Label fx:id="lblStatus" text="Fetching data..." style="-fx-text-fill: #999; -fx-font-size: 11px;" />
+            </VBox>
+
+            <!-- ── RECENT BOOKINGS SECTION ── -->
+            <VBox spacing="10">
+                <!-- Section Header -->
+                <HBox alignment="CENTER_LEFT">
+                    <Pane minWidth="4" prefWidth="4" minHeight="28" style="-fx-background-color: #2b5eb8;" />
+                    <Label text="Recent Bookings  (last 6)">
+                        <font><Font name="System Bold" size="14" /></font>
+                        <padding><Insets top="3" bottom="3" left="10" /></padding>
+                    </Label>
+                </HBox>
+
+                <TableView fx:id="recentTable" prefHeight="220" maxHeight="220">
+                    <placeholder>
+                        <Label text="No bookings recorded yet." />
+                    </placeholder>
+                    <columnResizePolicy>
+                        <TableView fx:constant="CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN" />
+                    </columnResizePolicy>
+                    <columns>
+                        <TableColumn text="Booking ID" prefWidth="82">
+                            <cellValueFactory><PropertyValueFactory property="bookingId" /></cellValueFactory>
+                        </TableColumn>
+                        <TableColumn text="Guest Name" prefWidth="155">
+                            <cellValueFactory><PropertyValueFactory property="guestName" /></cellValueFactory>
+                        </TableColumn>
+                        <TableColumn text="Room" prefWidth="70">
+                            <cellValueFactory><PropertyValueFactory property="roomNumber" /></cellValueFactory>
+                        </TableColumn>
+                        <TableColumn text="Check-In" prefWidth="105">
+                            <cellValueFactory><PropertyValueFactory property="checkIn" /></cellValueFactory>
+                        </TableColumn>
+                        <TableColumn text="Check-Out" prefWidth="105">
+                            <cellValueFactory><PropertyValueFactory property="checkOut" /></cellValueFactory>
+                        </TableColumn>
+                        
+                        <!-- These two columns get custom CellFactories assigned in Java -->
+                        <TableColumn fx:id="colAmt" text="Amount (Rs.)" prefWidth="110">
+                            <cellValueFactory><PropertyValueFactory property="totalAmount" /></cellValueFactory>
+                        </TableColumn>
+                        <TableColumn fx:id="colStatus" text="Status" prefWidth="105">
+                            <cellValueFactory><PropertyValueFactory property="status" /></cellValueFactory>
+                        </TableColumn>
+                    </columns>
+                </TableView>
+
+            </VBox>
+        </VBox>
+    </center>
+</fx:root>
