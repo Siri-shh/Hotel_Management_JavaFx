@@ -1,5 +1,6 @@
 package hotel.ui;
 
+import hotel.dao.BookingDAO;
 import hotel.dao.RoomDAO;
 import hotel.model.Room;
 import hotel.model.RoomType;
@@ -40,6 +41,7 @@ import java.util.List;
 public class RoomsTab extends BorderPane {
 
     private final RoomDAO roomDAO = new RoomDAO();
+    private final BookingDAO bookingDAO = new hotel.dao.BookingDAO();
 
     private final List<Room> allRooms = new ArrayList<>();
     private final ObservableList<Room> roomList = FXCollections.observableArrayList();
@@ -228,14 +230,11 @@ public class RoomsTab extends BorderPane {
         return form;
     }
 
-    // ── Type changed: auto-fill capacity & default price ─────────────────────
-
     private void onTypeChanged() {
         RoomType rt = RoomType.fromName(cbType.getValue());
         tfCapacity.setText(String.valueOf(rt.getCapacity()));
-        // Only suggest price if the field is currently empty (don't overwrite user value)
-        if (tfPrice.getText().isBlank())
-            tfPrice.setText(String.valueOf(rt.getDefaultPrice()));
+        // Always auto-fill the default price when the room type changes
+        tfPrice.setText(String.format("%.2f", rt.getDefaultPrice()));
     }
 
     // ── Async DB load ─────────────────────────────────────────────────────────
@@ -377,7 +376,11 @@ public class RoomsTab extends BorderPane {
     private void deleteSelected() {
         Room sel = table.getSelectionModel().getSelectedItem();
         if (sel == null) { status("Select a room to delete.", true); return; }
-        if (!sel.isAvailable()) { status("Cannot delete an occupied room.", true); return; }
+        if (!sel.isAvailable()) { status("Cannot delete a currently occupied room.", true); return; }
+        if (bookingDAO.hasUpcomingBookings(sel.getRoomNumber())) {
+            status("Cannot delete a room that has ACTIVE or SCHEDULED bookings.", true);
+            return;
+        }
         Alert dlg = new Alert(Alert.AlertType.CONFIRMATION,
             "Delete room " + sel.getRoomNumber() + " (" + sel.getType() + ")?",
             ButtonType.YES, ButtonType.NO);

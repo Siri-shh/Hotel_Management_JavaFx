@@ -76,6 +76,7 @@ public class CheckoutTab extends BorderPane {
         TableColumn<Booking, String>  colRoom = tcol("Room",       "roomNumber",  70);
         TableColumn<Booking, String>  colIn   = tcol("Check-In",   "checkIn",   100);
         TableColumn<Booking, String>  colOut  = tcol("Check-Out",  "checkOut",  100);
+        TableColumn<Booking, String>  colStat = tcol("Status",     "status",     90);
 
         TableColumn<Booking, Double> colAmt = new TableColumn<>("Amount (Rs.)");
         colAmt.setCellValueFactory(new PropertyValueFactory<>("totalAmount"));
@@ -87,17 +88,21 @@ public class CheckoutTab extends BorderPane {
             }
         });
 
-        table.getColumns().addAll(colId, colName, colPhone, colRoom, colIn, colOut, colAmt);
+        table.getColumns().addAll(colId, colName, colPhone, colRoom, colIn, colOut, colStat, colAmt);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        table.setPlaceholder(new Label("No guests are currently checked in."));
+        table.setPlaceholder(new Label("No guests are active or scheduled."));
         VBox.setVgrow(table, Priority.ALWAYS);
 
-        // ── Row factory: highlight overdue rows in amber ──────────────────────
+        // ── Row factory: highlight overdue and scheduled ────────────────────────
         table.setRowFactory(tv -> new TableRow<>() {
             @Override
             protected void updateItem(Booking item, boolean empty) {
                 super.updateItem(item, empty);
                 if (!empty && item != null) {
+                    if ("SCHEDULED".equals(item.getStatus())) {
+                        setStyle("-fx-background-color: #e3f2fd;"); // light blue — scheduled
+                        return;
+                    }
                     try {
                         LocalDate checkOut = LocalDate.parse(item.getCheckOut());
                         if ("ACTIVE".equals(item.getStatus()) && checkOut.isBefore(LocalDate.now())) {
@@ -106,7 +111,7 @@ public class CheckoutTab extends BorderPane {
                         }
                     } catch (Exception ignored) {}
                 }
-                setStyle(""); // reset non-overdue rows
+                setStyle(""); // reset
             }
         });
 
@@ -114,13 +119,12 @@ public class CheckoutTab extends BorderPane {
         table.getSelectionModel().selectedItemProperty()
              .addListener((obs, old, sel) -> { if (sel != null) populateBill(sel); });
 
-        Label overdueNote = new Label(
-            "Amber rows = check-out date has already passed (overdue).");
-        overdueNote.setStyle("-fx-text-fill: #b36b00; -fx-font-size: 11px;");
+        Label infoNote = new Label("Amber = Overdue checkout.  |  Blue = Scheduled for the future.");
+        infoNote.setStyle("-fx-text-fill: #555; -fx-font-size: 11px;");
 
         VBox section = new VBox(8,
-            sectionHeader("Currently Checked-In Guests"),
-            searchRow, table, overdueNote
+            sectionHeader("Active & Scheduled Bookings"),
+            searchRow, table, infoNote
         );
         section.setPadding(new Insets(0, 14, 0, 0));
         VBox.setVgrow(table, Priority.ALWAYS);
@@ -156,13 +160,19 @@ public class CheckoutTab extends BorderPane {
         btnCheckout.setMaxWidth(Double.MAX_VALUE);
         btnCheckout.setOnAction(e -> performCheckout());
 
+        Button btnCancel = new Button("Cancel Booking");
+        btnCancel.setStyle("-fx-background-color: #b71c1c; -fx-text-fill: white;" +
+                           "-fx-font-weight: bold; -fx-padding: 7 16; -fx-background-radius: 3;");
+        btnCancel.setMaxWidth(Double.MAX_VALUE);
+        btnCancel.setOnAction(e -> performCancel());
+
         lblStatus.setWrapText(true);
         lblStatus.setFont(Font.font("System", 12));
 
         VBox panel = new VBox(10,
             sectionHeader("Bill Summary"),
             grid, new Separator(), totRow, new Separator(),
-            btnCheckout, lblStatus
+            btnCheckout, btnCancel, lblStatus
         );
         panel.setPadding(new Insets(14));
         panel.setPrefWidth(280);
@@ -175,7 +185,7 @@ public class CheckoutTab extends BorderPane {
     // ── Logic ─────────────────────────────────────────────────────────────────
 
     private void loadActive() {
-        bookingList.setAll(bookingDAO.getActiveBookings());
+        bookingList.setAll(bookingDAO.getActiveAndScheduledBookings());
         clearBill();
         lblStatus.setText("");
     }
@@ -185,7 +195,7 @@ public class CheckoutTab extends BorderPane {
         if (q.isEmpty()) { loadActive(); return; }
         bookingList.setAll(
             bookingDAO.searchByGuestName(q).stream()
-                .filter(b -> "ACTIVE".equals(b.getStatus())).toList()
+                .filter(b -> "ACTIVE".equals(b.getStatus()) || "SCHEDULED".equals(b.getStatus())).toList()
         );
         clearBill();
     }
@@ -218,6 +228,7 @@ public class CheckoutTab extends BorderPane {
     private void performCheckout() {
         Booking sel = table.getSelectionModel().getSelectedItem();
         if (sel == null) { status("Select a booking from the table first.", true); return; }
+        if (!"ACTIVE".equals(sel.getStatus())) { status("Scheduled bookings must be cancelled, not checked out.", true); return; }
 
         Alert dlg = new Alert(Alert.AlertType.CONFIRMATION,
             "Check out " + sel.getGuestName() + " from room " + sel.getRoomNumber() + "?\n" +
@@ -233,6 +244,46 @@ public class CheckoutTab extends BorderPane {
                 loadActive();
             }
         });
+    }
+
+    private void performCancel() {
+        Booking sel = table.getSelectionModel().getSelectedItem();
+        if (sel == null) { status("Select a booking from the table first.", true); return; }
+
+        try {
+            LocalDate inDate = LocalDate.parse(sel.getCheckIn());
+            double penalty = sel.getTotalAmount();
+            String feeDetail = "100% of subtotal";
+
+            // If cancelled before the check-in date
+            if (LocalDate.now().isBefore(inDate)) {
+                penalty = sel.getTotalAmount() * 0.10;
+                feeDetail = "10% of subtotal";
+            }
+
+            Alert dlg = new Alert(Alert.AlertType.CONFIRMATION,
+                "Cancel booking for " + sel.getGuestName() + " (Room " + sel.getRoomNumber() + ")?\n\n" +
+                "Penalty Applied: " + feeDetail + "\n" +
+                "Amount to Charge: Rs. " + String.format("%.2f", penalty),
+                ButtonType.YES, ButtonType.NO);
+            dlg.setTitle("Confirm Cancellation");
+            dlg.setHeaderText("Cancel Booking #" + sel.getBookingId());
+            
+            double finalPenalty = penalty;
+            dlg.showAndWait().ifPresent(btn -> {
+                if (btn == ButtonType.YES) {
+                    bookingDAO.cancelBooking(sel.getBookingId(), finalPenalty);
+                    // Only free the room physically if it was marked ACTIVE
+                    if ("ACTIVE".equals(sel.getStatus())) {
+                        roomDAO.setAvailability(sel.getRoomNumber(), true);
+                    }
+                    status("Booking cancelled. Penalty charged: Rs. " + String.format("%.2f", finalPenalty), false);
+                    loadActive();
+                }
+            });
+        } catch (Exception e) {
+            status("Error calculating penalty dates.", true);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

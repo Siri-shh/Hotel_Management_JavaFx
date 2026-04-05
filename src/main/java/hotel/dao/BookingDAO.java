@@ -18,7 +18,7 @@ public class BookingDAO {
     public int createBooking(Booking booking) {
         String sql = "INSERT INTO bookings " +
                      "(room_number, guest_name, phone, check_in, check_out, total_amount, status, guest_count) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = db.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, booking.getRoomNumber());
             ps.setString(2, booking.getGuestName());
@@ -26,7 +26,8 @@ public class BookingDAO {
             ps.setString(4, booking.getCheckIn());
             ps.setString(5, booking.getCheckOut());
             ps.setDouble(6, booking.getTotalAmount());
-            ps.setInt(7,    booking.getGuestCount());
+            ps.setString(7, booking.getStatus());
+            ps.setInt(8,    booking.getGuestCount());
             ps.executeUpdate();
             ResultSet keys = ps.getGeneratedKeys();
             if (keys.next()) return keys.getInt(1);
@@ -53,6 +54,16 @@ public class BookingDAO {
              ResultSet rs = s.executeQuery(sql)) {
             while (rs.next()) list.add(mapRow(rs));
         } catch (SQLException e) { System.err.println("getActiveBookings: " + e.getMessage()); }
+        return list;
+    }
+
+    public List<Booking> getActiveAndScheduledBookings() {
+        List<Booking> list = new ArrayList<>();
+        String sql = "SELECT * FROM bookings WHERE status IN ('ACTIVE', 'SCHEDULED') ORDER BY booking_id DESC";
+        try (Statement s = db.getConnection().createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            while (rs.next()) list.add(mapRow(rs));
+        } catch (SQLException e) { System.err.println("getActiveAndScheduledBookings: " + e.getMessage()); }
         return list;
     }
 
@@ -108,6 +119,24 @@ public class BookingDAO {
             ps.setInt(1, bookingId);
             return ps.executeUpdate() > 0;
         } catch (SQLException e) { System.err.println("checkout: " + e.getMessage()); return false; }
+    }
+
+    public boolean cancelBooking(int bookingId, double penaltyFee) {
+        String sql = "UPDATE bookings SET status='CANCELLED', total_amount=? WHERE booking_id=?";
+        try (PreparedStatement ps = db.getConnection().prepareStatement(sql)) {
+            ps.setDouble(1, penaltyFee);
+            ps.setInt(2, bookingId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) { System.err.println("cancelBooking: " + e.getMessage()); return false; }
+    }
+
+    public boolean hasUpcomingBookings(String roomNumber) {
+        String sql = "SELECT 1 FROM bookings WHERE room_number=? AND status IN ('ACTIVE', 'SCHEDULED') LIMIT 1";
+        try (PreparedStatement ps = db.getConnection().prepareStatement(sql)) {
+            ps.setString(1, roomNumber);
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) { System.err.println("hasUpcomingBookings: " + e.getMessage()); return false; }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

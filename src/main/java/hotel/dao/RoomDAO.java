@@ -56,14 +56,22 @@ public class RoomDAO {
     }
 
     /**
-     * Returns available rooms that can accommodate at least minGuests people.
-     * Used by the booking form to filter rooms by guest count.
+     * Returns rooms that can accommodate at least minGuests people AND
+     * do not have any ACTIVE or SCHEDULED bookings overlapping the requested dates.
      */
-    public List<Room> getAvailableRoomsByCapacity(int minGuests) {
+    public List<Room> getAvailableRoomsByCapacity(int minGuests, String reqIn, String reqOut) {
         List<Room> list = new ArrayList<>();
-        String sql = "SELECT * FROM rooms WHERE is_available = 1 AND capacity >= ? ORDER BY capacity, room_number";
+        String sql = "SELECT * FROM rooms r WHERE r.capacity >= ? " +
+                     "AND NOT EXISTS (" +
+                     "    SELECT 1 FROM bookings b " +
+                     "    WHERE b.room_number = r.room_number " +
+                     "      AND b.status IN ('ACTIVE', 'SCHEDULED') " +
+                     "      AND b.check_in < ? AND b.check_out > ?" +
+                     ") ORDER BY r.capacity, r.room_number";
         try (PreparedStatement ps = db.getConnection().prepareStatement(sql)) {
             ps.setInt(1, minGuests);
+            ps.setString(2, reqOut);
+            ps.setString(3, reqIn);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) list.add(mapRow(rs));
         } catch (SQLException e) { System.err.println("getAvailableRoomsByCapacity: " + e.getMessage()); }

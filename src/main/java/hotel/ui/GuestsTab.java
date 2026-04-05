@@ -43,7 +43,7 @@ public class GuestsTab extends BorderPane {
         tfSearch.setPrefWidth(240);
         tfSearch.setOnAction(e -> applyFilter());
 
-        cbStatus.getItems().addAll("All Statuses", "Active Only", "Checked Out Only");
+        cbStatus.getItems().addAll("All Statuses", "Active Only", "Checked Out Only", "Scheduled Only", "Cancelled Only");
         cbStatus.setValue("All Statuses");
         cbStatus.setOnAction(e -> applyFilter());
 
@@ -85,10 +85,14 @@ public class GuestsTab extends BorderPane {
             @Override protected void updateItem(String val, boolean empty) {
                 super.updateItem(val, empty);
                 if (empty || val == null) { setText(null); setStyle(""); return; }
-                setText("ACTIVE".equals(val) ? "Active" : "Checked Out");
-                setStyle("ACTIVE".equals(val)
-                    ? "-fx-text-fill: #2e7d32; -fx-font-weight: bold;"
-                    : "-fx-text-fill: #888888; -fx-font-style: italic;");
+                
+                switch (val) {
+                    case "ACTIVE"      -> { setText("Active");      setStyle("-fx-text-fill: #2e7d32; -fx-font-weight: bold;"); }
+                    case "SCHEDULED"   -> { setText("Scheduled");   setStyle("-fx-text-fill: #0277bd; -fx-font-weight: bold;"); }
+                    case "CANCELLED"   -> { setText("Cancelled");   setStyle("-fx-text-fill: #b71c1c; -fx-font-weight: bold;"); }
+                    case "CHECKED_OUT" -> { setText("Checked Out"); setStyle("-fx-text-fill: #888888; -fx-font-style: italic;"); }
+                    default            -> { setText(val);           setStyle(""); }
+                }
             }
         });
 
@@ -117,6 +121,8 @@ public class GuestsTab extends BorderPane {
         List<Booking> filtered = switch (status) {
             case "Active Only"       -> base.stream().filter(b -> "ACTIVE".equals(b.getStatus())).toList();
             case "Checked Out Only"  -> base.stream().filter(b -> "CHECKED_OUT".equals(b.getStatus())).toList();
+            case "Scheduled Only"    -> base.stream().filter(b -> "SCHEDULED".equals(b.getStatus())).toList();
+            case "Cancelled Only"    -> base.stream().filter(b -> "CANCELLED".equals(b.getStatus())).toList();
             default                  -> base;
         };
 

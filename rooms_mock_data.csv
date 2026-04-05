@@ -1,0 +1,12 @@
+room_number,type,floor,price,description
+101,Single,1,,Standard Single bed facing the street
+102,Single,1,,Standard Single bed
+103,Double,1,,Corner double room with extra windows
+104,Deluxe,1,,Spacious deluxe room with mini-fridge
+105,Suite,1,5500.00,Luxury suite with separate lounge and ocean view
+201,Single,2,1200.00,Single room near elevator
+202,Double,2,,Standard Double room on second floor
+203,Deluxe,2,,Premium Deluxe with balcony access
+204,Deluxe,2,3100.00,Premium Deluxe with quiet courtyard view
+301,Suite,3,6000.00,Penthouse Executive Suite with jacuzzi
+302,Double,3,,Quiet third-floor double room

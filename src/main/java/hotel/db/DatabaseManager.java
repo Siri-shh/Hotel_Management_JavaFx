@@ -22,8 +22,12 @@ public class DatabaseManager {
     }
 
     public Connection getConnection() throws SQLException {
-        if (connection == null || connection.isClosed())
+        if (connection == null || connection.isClosed()) {
             connection = DriverManager.getConnection(DB_URL);
+            try (Statement stmt = connection.createStatement()) {
+                stmt.execute("PRAGMA foreign_keys = ON;");
+            }
+        }
         return connection;
     }
 

@@ -67,7 +67,7 @@ public class BookingTab extends BorderPane {
         setTop(sectionHeader("New Room Booking"));
         BorderPane.setMargin(sectionHeader("New Room Booking"), new Insets(0, 0, 10, 0));
         setCenter(new HBox(16, buildForm(), buildBillPanel()));
-        reloadRooms(1); // start showing all single and above rooms
+        reloadRooms(); // start showing all single and above rooms
     }
 
     // ── Form ──────────────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ public class BookingTab extends BorderPane {
                 int g = Integer.parseInt(n);
                 if (g >= 1) {
                     errGuests.setText("");
-                    reloadRooms(g);
+                    reloadRooms();
                 }
             }
         });
@@ -110,10 +110,7 @@ public class BookingTab extends BorderPane {
         cbRooms.setOnAction(e -> recalcBill());
 
         Button btnRefresh = new Button("Refresh Rooms");
-        btnRefresh.setOnAction(e -> {
-            int g = tfGuests.getText().isBlank() ? 1 : Integer.parseInt(tfGuests.getText());
-            reloadRooms(g);
-        });
+        btnRefresh.setOnAction(e -> reloadRooms());
 
         HBox roomRow = new HBox(8, cbRooms, btnRefresh);
         HBox.setHgrow(cbRooms, Priority.ALWAYS);
@@ -123,8 +120,8 @@ public class BookingTab extends BorderPane {
         // Dates
         dpIn.setEditable(false); dpIn.setMaxWidth(Double.MAX_VALUE);
         dpOut.setEditable(false); dpOut.setMaxWidth(Double.MAX_VALUE);
-        dpIn.valueProperty().addListener((obs, o, n)  -> recalcBill());
-        dpOut.valueProperty().addListener((obs, o, n) -> recalcBill());
+        dpIn.valueProperty().addListener((obs, o, n)  -> { reloadRooms(); recalcBill(); });
+        dpOut.valueProperty().addListener((obs, o, n) -> { reloadRooms(); recalcBill(); });
 
         // Buttons
         Button btnBook  = styledBtn("Confirm Booking", "#1c2e4a");
@@ -188,11 +185,20 @@ public class BookingTab extends BorderPane {
     // ── Logic ─────────────────────────────────────────────────────────────────
 
     /**
-     * Loads available rooms that can hold at least minGuests people.
-     * Called whenever the guest count field changes.
+     * Loads available rooms that can hold at least the guest count
+     * AND are free during the selected date range.
      */
-    private void reloadRooms(int minGuests) {
-        List<Room> rooms = roomDAO.getAvailableRoomsByCapacity(minGuests);
+    private void reloadRooms() {
+        LocalDate in = dpIn.getValue();
+        LocalDate out = dpOut.getValue();
+        if (in == null || out == null || !out.isAfter(in)) {
+            cbRooms.setItems(FXCollections.observableArrayList());
+            clearBillPreview();
+            return;
+        }
+        
+        int minGuests = tfGuests.getText().isBlank() ? 1 : Integer.parseInt(tfGuests.getText());
+        List<Room> rooms = roomDAO.getAvailableRoomsByCapacity(minGuests, in.toString(), out.toString());
         cbRooms.setItems(FXCollections.observableArrayList(rooms));
         if (!rooms.isEmpty()) {
             cbRooms.getSelectionModel().selectFirst();
@@ -202,7 +208,7 @@ public class BookingTab extends BorderPane {
         } else {
             cbRooms.setValue(null);
             clearBillPreview();
-            errRoom.setText("No available rooms can accommodate " + minGuests + " guest(s).");
+            errRoom.setText("No available rooms for " + minGuests + " guest(s) on those dates.");
         }
     }
 
@@ -253,10 +259,20 @@ public class BookingTab extends BorderPane {
         LocalDate in  = dpIn.getValue();
         LocalDate out = dpOut.getValue();
         if (in == null || out == null || !out.isAfter(in)) { errDates.setText("Check-out must be after check-in."); ok = false; }
-        else if (in.isBefore(LocalDate.now())) { errDates.setText("Check-in cannot be in the past."); ok = false; }
         else errDates.setText("");
 
         if (!ok) return;
+
+        // Confirm backdating
+        if (in.isBefore(LocalDate.now())) {
+            Alert dlg = new Alert(Alert.AlertType.CONFIRMATION,
+                "You are entering a booking with a past check-in date. Is this correct?",
+                ButtonType.YES, ButtonType.NO);
+            dlg.setTitle("Past Date Warning");
+            dlg.setHeaderText(null);
+            ButtonType res = dlg.showAndWait().orElse(ButtonType.NO);
+            if (res != ButtonType.YES) return;
+        }
 
         // Capacity double-check
         Room room = cbRooms.getValue();
@@ -268,14 +284,18 @@ public class BookingTab extends BorderPane {
         long nights   = ChronoUnit.DAYS.between(in, out);
         double total  = nights * room.getPricePerNight() * 1.10;
 
+        String calculatedStatus = in.isAfter(LocalDate.now()) ? "SCHEDULED" : "ACTIVE";
+
         Booking b = new Booking(0, room.getRoomNumber(),
             tfName.getText().trim(), tfPhone.getText().trim(),
-            in.toString(), out.toString(), total, "ACTIVE", guestCount);
+            in.toString(), out.toString(), total, calculatedStatus, guestCount);
 
         int id = bookingDAO.createBooking(b);
         if (id > 0) {
-            roomDAO.setAvailability(room.getRoomNumber(), false);
-            status("Booking confirmed! ID: " + id + "  |  Room " + room.getRoomNumber()
+            if (calculatedStatus.equals("ACTIVE")) {
+                roomDAO.setAvailability(room.getRoomNumber(), false);
+            }
+            status("Booking confirmed! ID: " + id + "  |  [" + calculatedStatus + "] Room " + room.getRoomNumber()
                    + " for " + guestCount + " guest(s).", false);
             resetForm();
         } else {
@@ -289,7 +309,7 @@ public class BookingTab extends BorderPane {
         for (Label l : new Label[]{errName, errPhone, errGuests, errRoom, errDates}) l.setText("");
         lblStatus.setText("");
         clearBillPreview();
-        reloadRooms(1);
+        reloadRooms();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
