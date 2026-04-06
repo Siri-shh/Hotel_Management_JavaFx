@@ -17,17 +17,18 @@ public class BookingDAO {
     /** Creates booking and returns generated ID, or -1 on failure. */
     public int createBooking(Booking booking) {
         String sql = "INSERT INTO bookings " +
-                     "(room_number, guest_name, phone, check_in, check_out, total_amount, status, guest_count) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                     "(room_number, guest_name, phone, guest_id, check_in, check_out, total_amount, status, guest_count) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement ps = db.getConnection().prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, booking.getRoomNumber());
             ps.setString(2, booking.getGuestName());
             ps.setString(3, booking.getPhone());
-            ps.setString(4, booking.getCheckIn());
-            ps.setString(5, booking.getCheckOut());
-            ps.setDouble(6, booking.getTotalAmount());
-            ps.setString(7, booking.getStatus());
-            ps.setInt(8,    booking.getGuestCount());
+            ps.setString(4, booking.getGuestId());
+            ps.setString(5, booking.getCheckIn());
+            ps.setString(6, booking.getCheckOut());
+            ps.setDouble(7, booking.getTotalAmount());
+            ps.setString(8, booking.getStatus());
+            ps.setInt(9,    booking.getGuestCount());
             ps.executeUpdate();
             ResultSet keys = ps.getGeneratedKeys();
             if (keys.next()) return keys.getInt(1);
@@ -111,6 +112,42 @@ public class BookingDAO {
         return list;
     }
 
+    /** Revenue per room type (CHECKED_OUT bookings joined with rooms). */
+    public java.util.Map<String, Double> getRevenueByRoomType() {
+        java.util.Map<String, Double> map = new java.util.LinkedHashMap<>();
+        String sql = "SELECT r.type, COALESCE(SUM(b.total_amount), 0) " +
+                     "FROM rooms r LEFT JOIN bookings b " +
+                     "ON r.room_number = b.room_number AND b.status = 'CHECKED_OUT' " +
+                     "GROUP BY r.type ORDER BY r.type";
+        try (Statement s = db.getConnection().createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            while (rs.next()) map.put(rs.getString(1), rs.getDouble(2));
+        } catch (SQLException e) { System.err.println("getRevenueByRoomType: " + e.getMessage()); }
+        return map;
+    }
+
+    /** Booking counts grouped by month (last 6 months always shown). */
+    public java.util.Map<String, Integer> getBookingsPerMonth() {
+        java.util.Map<String, Integer> map = new java.util.LinkedHashMap<>();
+        java.time.LocalDate today = java.time.LocalDate.now();
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("MMM yyyy");
+        for (int i = 5; i >= 0; i--)
+            map.put(today.minusMonths(i).format(fmt), 0);
+        String sql = "SELECT strftime('%m', check_in), strftime('%Y', check_in), COUNT(*) " +
+                     "FROM bookings GROUP BY 2, 1 ORDER BY 2, 1";
+        try (Statement s = db.getConnection().createStatement();
+             ResultSet rs = s.executeQuery(sql)) {
+            while (rs.next()) {
+                int mo = Integer.parseInt(rs.getString(1));
+                int yr = Integer.parseInt(rs.getString(2));
+                String key = java.time.Month.of(mo).getDisplayName(
+                    java.time.format.TextStyle.SHORT, java.util.Locale.ENGLISH) + " " + yr;
+                map.merge(key, rs.getInt(3), Integer::sum);
+            }
+        } catch (SQLException e) { System.err.println("getBookingsPerMonth: " + e.getMessage()); }
+        return map;
+    }
+
     // ── Update ────────────────────────────────────────────────────────────────
 
     public boolean checkout(int bookingId) {
@@ -147,6 +184,7 @@ public class BookingDAO {
             rs.getString("room_number"),
             rs.getString("guest_name"),
             rs.getString("phone"),
+            rs.getString("guest_id"),
             rs.getString("check_in"),
             rs.getString("check_out"),
             rs.getDouble("total_amount"),

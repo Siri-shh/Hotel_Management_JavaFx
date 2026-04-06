@@ -59,13 +59,14 @@ public class GuestsTab extends BorderPane {
         toolbar.setPadding(new Insets(0, 0, 8, 0));
 
         // ── Table ─────────────────────────────────────────────────────────────
-        TableColumn<Booking, Integer> colId     = tcol("Booking ID",  "bookingId",   80);
-        TableColumn<Booking, String>  colName   = tcol("Guest Name",  "guestName",  140);
-        TableColumn<Booking, String>  colPhone  = tcol("Phone",       "phone",       110);
-        TableColumn<Booking, String>  colRoom   = tcol("Room No",     "roomNumber",   70);
-        TableColumn<Booking, Integer> colGuests = tcol("Guests",      "guestCount",   65);
-        TableColumn<Booking, String>  colIn     = tcol("Check-In",    "checkIn",     100);
-        TableColumn<Booking, String>  colOut    = tcol("Check-Out",   "checkOut",    100);
+        TableColumn<Booking, Integer> colId       = tcol("Booking ID",  "bookingId",   80);
+        TableColumn<Booking, String>  colName     = tcol("Guest Name",  "guestName",  130);
+        TableColumn<Booking, String>  colPhone    = tcol("Phone",       "phone",       110);
+        TableColumn<Booking, String>  colGuestId  = tcol("Aadhaar ID",  "guestId",    130);
+        TableColumn<Booking, String>  colRoom     = tcol("Room No",     "roomNumber",   70);
+        TableColumn<Booking, Integer> colGuests   = tcol("Guests",      "guestCount",   65);
+        TableColumn<Booking, String>  colIn       = tcol("Check-In",    "checkIn",     100);
+        TableColumn<Booking, String>  colOut      = tcol("Check-Out",   "checkOut",    100);
 
         TableColumn<Booking, Double> colAmt = new TableColumn<>("Amount (Rs.)");
         colAmt.setCellValueFactory(new PropertyValueFactory<>("totalAmount"));
@@ -96,7 +97,7 @@ public class GuestsTab extends BorderPane {
             }
         });
 
-        table.getColumns().addAll(colId, colName, colPhone, colRoom, colGuests, colIn, colOut, colAmt, colStatus);
+        table.getColumns().addAll(colId, colName, colPhone, colGuestId, colRoom, colGuests, colIn, colOut, colAmt, colStatus);
         table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         table.setPlaceholder(new Label("No records found for the selected filter."));
         VBox.setVgrow(table, Priority.ALWAYS);

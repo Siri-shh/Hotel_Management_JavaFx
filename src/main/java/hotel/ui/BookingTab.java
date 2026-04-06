@@ -34,19 +34,21 @@ public class BookingTab extends BorderPane {
     private final BookingDAO bookingDAO = new BookingDAO();
 
     // Inputs
-    private final TextField         tfName   = new TextField();
-    private final TextField         tfPhone  = new TextField();
-    private final TextField         tfGuests = new TextField();
-    private final ComboBox<Room>    cbRooms  = new ComboBox<>();
-    private final DatePicker        dpIn     = new DatePicker(LocalDate.now());
-    private final DatePicker        dpOut    = new DatePicker(LocalDate.now().plusDays(1));
+    private final TextField         tfName    = new TextField();
+    private final TextField         tfPhone   = new TextField();
+    private final TextField         tfAadhaar = new TextField();
+    private final TextField         tfGuests  = new TextField();
+    private final ComboBox<Room>    cbRooms   = new ComboBox<>();
+    private final DatePicker        dpIn      = new DatePicker(LocalDate.now());
+    private final DatePicker        dpOut     = new DatePicker(LocalDate.now().plusDays(1));
 
     // Per-field errors
-    private final Label errName   = errLabel();
-    private final Label errPhone  = errLabel();
-    private final Label errGuests = errLabel();
-    private final Label errRoom   = errLabel();
-    private final Label errDates  = errLabel();
+    private final Label errName    = errLabel();
+    private final Label errPhone   = errLabel();
+    private final Label errAadhaar = errLabel();
+    private final Label errGuests  = errLabel();
+    private final Label errRoom    = errLabel();
+    private final Label errDates   = errLabel();
 
     // Bill preview
     private final Label billRoom     = new Label("—");
@@ -134,9 +136,24 @@ public class BookingTab extends BorderPane {
         lblStatus.setWrapText(true);
         lblStatus.setFont(Font.font("System", 12));
 
+        // Aadhaar ID
+        tfAadhaar.setPromptText("12-digit Aadhaar number");
+        tfAadhaar.setTextFormatter(Validator.aadhaarFormatter());
+        tfAadhaar.setMaxWidth(Double.MAX_VALUE);
+
+        Label aadhaarHint = new Label("0 / 12 digits");
+        aadhaarHint.setStyle("-fx-text-fill: #888; -fx-font-size: 11px;");
+        tfAadhaar.textProperty().addListener((obs, o, n) -> {
+            aadhaarHint.setText(n.length() + " / 12 digits");
+            aadhaarHint.setStyle(n.length() == 12
+                ? "-fx-text-fill: #2e7d32; -fx-font-size: 11px;"
+                : "-fx-text-fill: #888; -fx-font-size: 11px;");
+        });
+
         VBox form = new VBox(10,
             fieldGroup("Guest Name  *", tfName, errName),
             new VBox(3, boldLabel("Phone Number  *  (10 digits)"), tfPhone, phoneHint, errPhone),
+            new VBox(3, boldLabel("Aadhaar ID  *  (12 digits)"), tfAadhaar, aadhaarHint, errAadhaar),
             fieldGroup("No. of Guests  *  (1 – 4)", tfGuests, errGuests),
             new VBox(4, boldLabel("Select Room  *"), roomRow, roomNote, errRoom),
             new VBox(4, boldLabel("Check-in Date  *"), dpIn),
@@ -246,6 +263,7 @@ public class BookingTab extends BorderPane {
 
         if (!Validator.isValidName(tfName.getText())) { errName.setText("Name must be at least 2 characters."); ok = false; } else errName.setText("");
         if (!Validator.isValidPhone(tfPhone.getText())) { errPhone.setText("Phone must be exactly 10 digits."); ok = false; } else errPhone.setText("");
+        if (!Validator.isValidAadhaar(tfAadhaar.getText())) { errAadhaar.setText("Aadhaar must be exactly 12 digits."); ok = false; } else errAadhaar.setText("");
 
         int guestCount = 1;
         if (tfGuests.getText().isBlank() || Integer.parseInt(tfGuests.getText()) < 1) {
@@ -287,7 +305,7 @@ public class BookingTab extends BorderPane {
         String calculatedStatus = in.isAfter(LocalDate.now()) ? "SCHEDULED" : "ACTIVE";
 
         Booking b = new Booking(0, room.getRoomNumber(),
-            tfName.getText().trim(), tfPhone.getText().trim(),
+            tfName.getText().trim(), tfPhone.getText().trim(), tfAadhaar.getText().trim(),
             in.toString(), out.toString(), total, calculatedStatus, guestCount);
 
         int id = bookingDAO.createBooking(b);
@@ -304,9 +322,9 @@ public class BookingTab extends BorderPane {
     }
 
     private void resetForm() {
-        tfName.clear(); tfPhone.clear(); tfGuests.clear();
+        tfName.clear(); tfPhone.clear(); tfAadhaar.clear(); tfGuests.clear();
         dpIn.setValue(LocalDate.now()); dpOut.setValue(LocalDate.now().plusDays(1));
-        for (Label l : new Label[]{errName, errPhone, errGuests, errRoom, errDates}) l.setText("");
+        for (Label l : new Label[]{errName, errPhone, errAadhaar, errGuests, errRoom, errDates}) l.setText("");
         lblStatus.setText("");
         clearBillPreview();
         reloadRooms();

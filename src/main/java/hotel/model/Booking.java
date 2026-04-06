@@ -2,26 +2,28 @@ package hotel.model;
 
 import javafx.beans.property.*;
 
-/** Booking model — now records how many guests checked in. */
+/** Booking model — records guest details including Aadhaar ID. */
 public class Booking {
 
     private final IntegerProperty bookingId;
     private final StringProperty  roomNumber;
     private final StringProperty  guestName;
     private final StringProperty  phone;
+    private final StringProperty  guestId;      // Aadhaar number (12 digits)
     private final StringProperty  checkIn;
     private final StringProperty  checkOut;
     private final DoubleProperty  totalAmount;
     private final StringProperty  status;
-    private final IntegerProperty guestCount;   // number of people checking in
+    private final IntegerProperty guestCount;
 
     public Booking(int bookingId, String roomNumber, String guestName, String phone,
-                   String checkIn, String checkOut, double totalAmount,
+                   String guestId, String checkIn, String checkOut, double totalAmount,
                    String status, int guestCount) {
         this.bookingId   = new SimpleIntegerProperty(bookingId);
         this.roomNumber  = new SimpleStringProperty(roomNumber);
         this.guestName   = new SimpleStringProperty(guestName);
         this.phone       = new SimpleStringProperty(phone);
+        this.guestId     = new SimpleStringProperty(guestId != null ? guestId : "");
         this.checkIn     = new SimpleStringProperty(checkIn);
         this.checkOut    = new SimpleStringProperty(checkOut);
         this.totalAmount = new SimpleDoubleProperty(totalAmount);
@@ -41,6 +43,9 @@ public class Booking {
 
     public String getPhone()                    { return phone.get(); }
     public StringProperty phoneProperty()       { return phone; }
+
+    public String getGuestId()                  { return guestId.get(); }
+    public StringProperty guestIdProperty()     { return guestId; }
 
     public String getCheckIn()                  { return checkIn.get(); }
     public StringProperty checkInProperty()     { return checkIn; }

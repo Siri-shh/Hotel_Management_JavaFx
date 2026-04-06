@@ -26,6 +26,7 @@ public class Main extends Application {
     @Override
     public void start(Stage primaryStage) {
         DatabaseManager.getInstance().initializeDatabase();
+        hotel.db.DatabaseSeeder.seedIfEmpty();
 
         // ── Header Bar ────────────────────────────────────────────────────────
         Label hotelName = new Label("Grand Plaza  —  Hotel Management System");
@@ -47,26 +48,32 @@ public class Main extends Application {
         HBox header = new HBox(hotelName, lblClock);
         header.setAlignment(Pos.CENTER_LEFT);
         header.setPadding(new Insets(10, 18, 10, 18));
-        header.setStyle("-fx-background-color: #1c2e4a;");
+        header.setStyle("-fx-background-color: linear-gradient(to right, #1c3a72, #2b5eb8);");
 
         // ── Tab Pane ──────────────────────────────────────────────────────────
         TabPane tabPane = new TabPane();
         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
         tabPane.setStyle("-fx-font-size: 13px;");
 
-        Tab dashboardTab = new Tab("Dashboard",    new DashboardTab());
-        Tab roomsTab     = new Tab("Rooms",         new RoomsTab());
-        Tab bookingTab   = new Tab("Book Room",     new BookingTab());
-        Tab checkoutTab  = new Tab("Checkout",      new CheckoutTab());
-        Tab guestsTab    = new Tab("Guest History", new GuestsTab());
+        Tab dashboardTab  = new Tab("Dashboard",    new DashboardTab());
+        Tab roomsTab      = new Tab("Rooms",         new RoomsTab());
+        Tab bookingTab    = new Tab("Book Room",     new BookingTab());
+        Tab checkoutTab   = new Tab("Checkout",      new CheckoutTab());
+        Tab guestsTab     = new Tab("Guest History", new GuestsTab());
+        Tab analyticsTab  = new Tab("Analytics",     new AnalyticsTab());
+        Tab floorPlanTab  = new Tab("Floor Plan",    new FloorPlanTab());
 
-        tabPane.getTabs().addAll(dashboardTab, roomsTab, bookingTab, checkoutTab, guestsTab);
+        tabPane.getTabs().addAll(dashboardTab, roomsTab, bookingTab, checkoutTab, guestsTab, analyticsTab, floorPlanTab);
 
         // Refresh dashboard stats each time the Dashboard tab is selected
         tabPane.getSelectionModel().selectedItemProperty()
                .addListener((obs, old, newTab) -> {
                    if (newTab == dashboardTab)
                        ((DashboardTab) dashboardTab.getContent()).refresh();
+                   if (newTab == analyticsTab)
+                       ((AnalyticsTab) analyticsTab.getContent()).refresh();
+                   if (newTab == floorPlanTab)
+                       ((FloorPlanTab) floorPlanTab.getContent()).refresh();
                });
 
         BorderPane root = new BorderPane();
@@ -74,6 +81,9 @@ public class Main extends Application {
         root.setCenter(tabPane);
 
         Scene scene = new Scene(root, 1080, 720);
+        // Load global stylesheet — styles tabs, tables, buttons, inputs
+        String css = getClass().getResource("/hotel/ui/app.css").toExternalForm();
+        scene.getStylesheets().add(css);
         primaryStage.setTitle("Hotel Management System");
         primaryStage.setScene(scene);
         primaryStage.setMinWidth(900);

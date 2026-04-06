@@ -54,4 +54,15 @@ public final class Validator {
         return new TextFormatter<>(change ->
             change.getControlNewText().matches("\\d{0,10}") ? change : null);
     }
+
+    /** Exactly 12 digits — valid Aadhaar number. */
+    public static boolean isValidAadhaar(String s) {
+        return s != null && s.matches("\\d{12}");
+    }
+
+    /** Allows only digits, up to 12 (Aadhaar). */
+    public static TextFormatter<String> aadhaarFormatter() {
+        return new TextFormatter<>(change ->
+            change.getControlNewText().matches("\\d{0,12}") ? change : null);
+    }
 }
